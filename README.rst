@@ -29,8 +29,33 @@ operations on smaller (< millions) csv files where operations are expensive and 
 * Free software: MIT license
 * Documentation: https://lico.readthedocs.io.
 
-# add example code here
+Example::
 
+    from lico import Table, process
+    from lico.tests.example_classes import Concatenate
+
+    input_list = Table.init_from_path("/tmp/input.csv")
+    output_list = lico.process(input_list,
+                               Concatenate(columns=['patient', 'date']))  # adds a column
+    output_list.save("/tmp/output.csv")
+
+
+Why?
+----
+To make the following type of task easier:
+* Here is an excel file of (~1000) rows including `legacy id`
+* Can we find `new id` for each of these legacy ids and also add `datapoint` based on `new id`?
+* This tasks never repeats in exactly this way.
+
+There are many ways to approach this. Mine is usually to get rid of excel by parsing the data into a flat
+csv file and then using a combination of a text editor and bash magic for merging, sorting. Intermediate
+steps are saved for auditing.
+
+However, for certain operations such as interacting with servers this is not enough. I then tend to use python.
+This is more powerful but also creates overhead. Many of these tasks are single-use. Each time I have to slighty
+modify the same code: read in csv, do something, handle errors, write output.
+
+lico tries to get rid of that boiler plate code as much as possible.
 
 Features
 --------
