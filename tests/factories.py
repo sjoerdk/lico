@@ -13,6 +13,6 @@ def generate_table(fieldnames=['field1', 'field2'], size=10):
     content = []
     for i in range(size):
         content.append({field: randomword(10) for field in fieldnames})
-    return Table(content)
+    return Table(content, column_order=fieldnames)
 
 

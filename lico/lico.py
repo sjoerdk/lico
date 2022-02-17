@@ -15,14 +15,7 @@ Design notes
 import csv
 from collections import OrderedDict
 
-from tqdm import tqdm
-from typing import Dict, List, Optional
-
-
-def read(csv_file_path):
-    with open(csv_file_path) as f:
-        content = [row for row in csv.DictReader(f)]
-    return content
+from typing import Dict, Iterator, List, Optional
 
 
 class Table:
@@ -85,6 +78,10 @@ class Table:
         for row in self.content:
             writer.writerow(row)
 
+    def save_to_path(self, path):
+        with open(path, 'w') as f:
+            self.save(f)
+
 
 class Operation:
     """Takes in a row, does something, optionally returns a row.
@@ -145,20 +142,95 @@ class Operation:
         """True if the given row contain a result from this operation"""
         return False
 
+    def apply_to_table(self, table: Table) -> Iterator:
+        return OperationIterator(input_list=table.content, operation=self)
 
-def process(input_list: Table, operation: Operation, catch_exceptions=True) -> Table:
-    """Apply operation to all rows in input and append result to each row."""
-    output_list = Table(content=[], column_order=input_list.column_order)
-    for idx, row in tqdm(enumerate(input_list)):
+
+class OperationIterator:
+    """For iteratively performing an operation while having a len() property"""
+
+    def __init__(self, input_list: Table, operation: Operation,
+                 skip_failing_rows=True):
+        self.input_list = input_list
+        self.operation = operation
+        self.skip_failing_rows = skip_failing_rows
+
+    def __len__(self):
+        return len(self.input_list)
+
+    def __iter__(self):
+        for result in self.all_results():
+            yield result
+
+    def all_results(self):
+        """Apply operation to each rows in input. Returns original row + results
+
+          Raises
+          ------
+          RowProcessError:
+              If skip_failing_rows=False and a single row cannot be processed
+
+          LicoError:
+              If something else goes wrong
+
+          """
+        for idx, row in enumerate(self.input_list):
+            try:
+                yield self.operation.apply_safe(row)
+            except RowProcessError as e:
+                if self.skip_failing_rows:
+                    print(f'Error processing line {idx}: {e}')
+                    yield row
+                else:
+                    raise
+
+
+def process_each_row(input_list: Table, operation: Operation,
+                     skip_failing_rows=True) -> Iterator[Dict]:
+    """Apply operation to each rows in input. Returns original row + results
+
+    Raises
+    ------
+    RowProcessError:
+        If skip_failing_rows=False and a single row cannot be processed
+
+    LicoError:
+        If something else goes wrong
+
+    """
+    for idx, row in enumerate(input_list):
         try:
-            output_list.append(operation.apply_safe(row))
+            yield operation.apply_safe(row)
         except RowProcessError as e:
-            if catch_exceptions:
+            if skip_failing_rows:
                 print(f'Error processing line {idx}: {e}')
-                continue
+                yield row
             else:
                 raise
+
+
+def process(input_list: Table, operation: Operation, skip_failing_rows=True):
+    output_list = Table(content=[], column_order=input_list.column_order)
+    for result in process_each_row(input_list, operation, skip_failing_rows):
+        output_list.append(result)
     return output_list
+
+
+class Task:
+
+    def __init__(self, input_path, operation, output_path):
+        self.input_path = input_path
+        self.operation = operation
+        self.output_path = output_path
+
+    def process(self, skip_failing_rows=True):
+        print(f'Reading {self.input_path}')
+        input_list = Table.init_from_path(self.input_path)
+
+        try:
+            output = process_each_row(input_list=input_list, skip_failing_rows=skip_failing_rows)
+        except LicoError as e:
+            print(f'Unhandled exception {e} stopping processing')
 
 
 class LicoError(Exception):

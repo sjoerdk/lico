@@ -29,8 +29,8 @@ def test_missing_parameter():
     """test when missing parameter, is error message clear?"""
     with pytest.raises(MissingInputColumn) as e:
         lico.process(generate_table(fieldnames=['patient', 'missingdate']),
-                     Concatenate(columns=['patient', 'date']),
-                     catch_exceptions=False)
+                              Concatenate(columns=['patient', 'date']),
+                              skip_failing_rows=False)
     assert "Missing column 'date'" in str(e)
 
 
@@ -45,6 +45,12 @@ def test_saving_sparse_table():
     content = file.read()
     assert "fieldA1,fieldA2,fieldB1" in content  # maintains original column order
 
+
+def test_apply_to_all():
+    input = generate_table(fieldnames=['col1', 'col2'])
+    operation = Concatenate(columns=['col1', 'col2'])
+    results = [x for x in operation.apply_to_table(input)]
+    assert len(results) == 10
 
 
 
