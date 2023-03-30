@@ -14,6 +14,7 @@ Design notes
 """
 import csv
 from collections import OrderedDict
+from pathlib import Path
 
 from typing import Dict, Iterator, List, Optional
 
@@ -43,7 +44,11 @@ class Table:
         return iter(self.content)
 
     def __len__(self):
+        """The number of rows in this table"""
         return len(self.content)
+
+    def __getitem__(self, item):
+        return Table(content=self.content[item], column_order=self.column_order)
 
     def append(self, val):
         """Append a row to this table"""
@@ -59,11 +64,36 @@ class Table:
         self.content = self.content + other.content
 
     @classmethod
-    def init_from_path(cls, path):
+    def init_from_path(cls, path, column_names=None):
+        """Parse csv table from given path
+
+        Parameters
+        ----------
+        path: str
+            path to file
+        column_names: Optional[List[str]]
+            names to use for each column in input
+
+        Returns
+        -------
+        Table
+
+        Raises
+        ------
+        ValueError
+            If number of column_names given do not correspond to structure of table
+        """
         with open(path) as f:
             reader = csv.DictReader(f)
+            if column_names:
+                if len(column_names) != len(reader.fieldnames):
+                    raise ValueError(f"{len(column_names)} fieldname(s) given ({column_names}), "
+                                     f"but {len(reader.fieldnames)} columns found "
+                                     f"in file. I can't be sure which column is which")
+            else:
+                column_names = reader.fieldnames
             return cls(content=[row for row in reader],
-                       column_order=reader.fieldnames)
+                       column_order=column_names)
 
     def get_fieldnames(self):
         """All unique header names. Maintains original column order if possible"""
@@ -84,12 +114,13 @@ class Table:
 
 
 class Operation:
-    """Takes in a row, does something, optionally returns a row.
+    """Takes in a row, optionally adds columns based on that row.
 
-    Handles common exceptions.
+    Warning
+    -------
+    An operation should always leave the original row values unchanged. Violating
+    this assumption will break resuming half-finished tasks
     """
-    inputs: List[str]
-    outputs: Optional[List[str]]
 
     def apply_safe(self, row, skip=True) -> Dict:
         """Run this operation on given row, handle exceptions
@@ -107,7 +138,7 @@ class Operation:
         MissingInputColumn:
             If row misses any of the inputs for this operation
         """
-        if skip and self.can_be_skipped(row):
+        if skip and self.has_previous_result(row):
             return row
         else:
             try:
@@ -138,7 +169,7 @@ class Operation:
         """
         return {}
 
-    def can_be_skipped(self, row: Dict):
+    def has_previous_result(self, row: Dict):
         """True if the given row contain a result from this operation"""
         return False
 
@@ -147,9 +178,12 @@ class Operation:
 
 
 class OperationIterator:
-    """For iteratively performing an operation while having a len() property"""
+    """Modifies each row in input by running operation on it.
 
-    def __init__(self, input_list: Table, operation: Operation,
+    Separate iterator to have a len() attribute, which gives nice tqdm progress bars
+    """
+
+    def __init__(self, input_list: List[Dict], operation: Operation,
                  skip_failing_rows=True):
         self.input_list = input_list
         self.operation = operation
@@ -163,7 +197,7 @@ class OperationIterator:
             yield result
 
     def all_results(self):
-        """Apply operation to each rows in input. Returns original row + results
+        """Apply operation to each row in input. Returns original row + results
 
           Raises
           ------
@@ -173,10 +207,17 @@ class OperationIterator:
           LicoError:
               If something else goes wrong
 
+          Notes
+          -----
+          Modifies input list!
+
           """
         for idx, row in enumerate(self.input_list):
             try:
-                yield self.operation.apply_safe(row)
+                #  update row in place and return updated version
+                updated = self.operation.apply_safe(row)
+                self.input_list[idx] = updated
+                yield updated
             except RowProcessError as e:
                 if self.skip_failing_rows:
                     print(f'Error processing line {idx}: {e}')
@@ -216,21 +257,69 @@ def process(input_list: Table, operation: Operation, skip_failing_rows=True):
     return output_list
 
 
+def process_iter(input_list: Table, operation: Operation,
+                 skip_failing_rows=True) -> Iterator[Dict]:
+    output_list = Table(content=[], column_order=input_list.column_order)
+    return process_each_row(input_list, operation, skip_failing_rows)
+
+
 class Task:
+    """Input file, Operation, output file. Facilitates iterative processing, skipping
+    existing results
+
+    Notes
+    -----
+    A task run will always write an output file, even if processing is halted
+    halfway through. A second run will then load the output file and skip any row
+    for which results are already computed
+
+    """
 
     def __init__(self, input_path, operation, output_path):
         self.input_path = input_path
         self.operation = operation
         self.output_path = output_path
 
-    def process(self, skip_failing_rows=True):
-        print(f'Reading {self.input_path}')
-        input_list = Table.init_from_path(self.input_path)
+    def all_results(self, raise_exceptions=False) -> Iterator[Dict]:
+        """Apply operation to each row in input, skip rows with previous answers.
+        Will always save output, even with user-cancel or exceptions
+
+        Parameters
+        ----------
+        raise_exceptions:
+            If true, re-raise any exception raised during processing.
+        """
+        # if output is there, load that
+        if Path(self.output_path).exists():
+            print(f'Output file {self.output_path} already exists. Augmenting '
+                  f'results')
+            input_list = Table.init_from_path(self.output_path)
+        else:
+            print(f'Output file did not exist. Reading {self.input_path}')
+            input_list = Table.init_from_path(self.input_path)
 
         try:
-            output = process_each_row(input_list=input_list, skip_failing_rows=skip_failing_rows)
-        except LicoError as e:
+            for result in self.operation.apply_to_table(input_list):
+                yield result
+        #TODO: arg get this straight. too many layers are catching errors. Move
+        # to single layer
+        except RowProcessError as e:
+            if raise_exceptions:
+                print(f'Unhandled exception {e} stopping processing')
+                self.save_to_output(input_list)
+                raise e
+            else:
+                print(f'Error occurred: {e}')
+
+        except Exception as e:
             print(f'Unhandled exception {e} stopping processing')
+            self.save_to_output(input_list)
+            raise e
+
+    def save_to_output(self, table):
+
+        print(f'Saving to {self.output_path}')
+        table.save_to_path(self.output_path)
 
 
 class LicoError(Exception):

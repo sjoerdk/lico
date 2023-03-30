@@ -37,7 +37,7 @@ Example::
     input_list = Table.init_from_path("/tmp/input.csv")
     output_list = lico.process(input_list,
                                Concatenate(columns=['patient', 'date']))  # adds a column
-    output_list.save("/tmp/output.csv")
+    output_list.save_to_path("/tmp/output.csv")
 
 
 Why?

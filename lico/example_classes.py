@@ -7,14 +7,14 @@ from lico.lico import Operation
 
 
 class Concatenate(Operation):
-    """An example of a subclass with an init parameter"""
+    """A simple operation. Concatenate two columns"""
     def __init__(self, columns):
         self.columns = columns
 
     def apply(self, row):
         return {'concatenated': ''.join(row[x] for x in self.columns)}
 
-    def can_be_skipped(self, row: Dict):
+    def has_previous_result(self, row: Dict):
         return bool(row.get('concatenated', None))
 
 
