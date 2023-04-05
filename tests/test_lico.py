@@ -110,6 +110,20 @@ def test_task(a_table_file, tmp_path):
     assert output.content[2]['server_result'] == ''
 
 
+def test_task_write_result(a_table_file, tmp_path):
+    """A task, once run, should return a result"""
+    output_path = tmp_path / 'a_result_file.csv'
+    task = Task(input_path=a_table_file,
+                operation=FetchResult(id_column='field1',
+                                      server_func=lambda x: f'{x}result'),
+                output_path=output_path)
+
+    results = [x for x in task.all_results(raise_exceptions=True)]
+
+    # output should still have been written, with the two results that were there
+    output = Table.init_from_path(output_path)
+
+
 def test_table_slicing():
     table = generate_table(fieldnames=['columnA', 'ColumnB'])
     # you can slice rows
