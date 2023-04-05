@@ -315,6 +315,7 @@ class Task:
             print(f'Unhandled exception {e} stopping processing')
             self.save_to_output(input_list)
             raise e
+        self.save_to_output(input_list)
 
     def save_to_output(self, table):
 
