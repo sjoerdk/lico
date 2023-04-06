@@ -7,7 +7,7 @@ from unittest.mock import Mock
 import pytest
 from lico import lico
 from lico.example_classes import Concatenate, FetchResult
-from lico.lico import MissingInputColumn, Table, Task
+from lico.lico import MissingInputColumn, Table, FileTask
 from tests import RESOURCE_PATH
 from tests.factories import generate_table
 
@@ -96,10 +96,10 @@ def test_task(a_table_file, tmp_path):
     unstable_server_func = Mock(side_effect=cycle(['one', 'two',
                                                    Exception('Horrible error')]))
     output_path = tmp_path / 'a_result_file.csv'
-    task = Task(input_path=a_table_file,
-                operation=FetchResult(id_column='field1',
+    task = FileTask(input_path=a_table_file,
+                    operation=FetchResult(id_column='field1',
                                       server_func=unstable_server_func),
-                output_path=output_path)
+                    output_path=output_path)
     with pytest.raises(Exception):
         results = [x for x in task.all_results(raise_exceptions=True)]
 
@@ -113,10 +113,10 @@ def test_task(a_table_file, tmp_path):
 def test_task_write_result(a_table_file, tmp_path):
     """A task, once run, should return a result"""
     output_path = tmp_path / 'a_result_file.csv'
-    task = Task(input_path=a_table_file,
-                operation=FetchResult(id_column='field1',
+    task = FileTask(input_path=a_table_file,
+                    operation=FetchResult(id_column='field1',
                                       server_func=lambda x: f'{x}result'),
-                output_path=output_path)
+                    output_path=output_path)
 
     results = [x for x in task.all_results(raise_exceptions=True)]
 

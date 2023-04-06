@@ -123,7 +123,7 @@ class Operation:
     """
 
     def apply_safe(self, row, skip=True) -> Dict:
-        """Run this operation on given row, handle exceptions
+        """Run this operation on given row, raise exceptions if operation fails
 
         Parameters
         ----------
@@ -263,7 +263,7 @@ def process_iter(input_list: Table, operation: Operation,
     return process_each_row(input_list, operation, skip_failing_rows)
 
 
-class Task:
+class FileTask:
     """Input file, Operation, output file. Facilitates iterative processing, skipping
     existing results
 
@@ -301,8 +301,7 @@ class Task:
         try:
             for result in self.operation.apply_to_table(input_list):
                 yield result
-        #TODO: arg get this straight. too many layers are catching errors. Move
-        # to single layer
+
         except RowProcessError as e:
             if raise_exceptions:
                 print(f'Unhandled exception {e} stopping processing')
