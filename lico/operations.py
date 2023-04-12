@@ -1,9 +1,9 @@
-"""Working with lico requires subclassing lico.Operation. This file contains examples
-of this.
+"""Operations take a single table row and give back a new row
 """
+
 from typing import Dict
 
-from lico.lico import Operation
+from lico.core import Operation
 
 
 class Concatenate(Operation):
@@ -27,4 +27,3 @@ class FetchResult(Operation):
     def apply(self, row):
         id_value = row[self.id_column]
         return {'server_result': self.server_func(id_value)}
-

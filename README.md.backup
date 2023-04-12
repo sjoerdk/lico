@@ -37,27 +37,6 @@ pip install lico
     output_list.save_to_path("/tmp/output.csv")
 ```
 
-### CSV structure
-
-The idea is to keep CSVs as simple and unambiguous as possible. Therefore:
-
-* All csv values are text. No interpreting things as ints. Too many operations
-  have been messed up by truncating leading zeros etc.
-* csv row headers are required and are considered unique keys
-
-
-### Working with CSV
-```
-# Run a task 
-
-
-input_list = Table.init_from_path("/tmp/input.csv")
-```
-
-###
-###
-
-
 ## Why?
 
 Situations in which lico might speed up your work:
