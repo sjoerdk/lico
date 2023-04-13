@@ -2,9 +2,8 @@
 
 
 [![CI](https://github.com/sjoerdk/lico/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/sjoerdk/lico/actions/workflows/build.yml?query=branch%3Amaster)
-[![PyPI](https://img.shields.io/pypi/v/dicomtrolley)](https://pypi.org/project/dicomtrolley/)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/dicomtrolley)](https://pypi.org/project/dicomtrolley/)
-[![Code Climate](https://codeclimate.com/github/sjoerdk/lico/badges/gpa.svg)](https://codeclimate.com/github/sjoerdk/lico)
+[![PyPI](https://img.shields.io/pypi/v/lico)](https://pypi.org/project/lico/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/lico)](https://pypi.org/project/lico/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Checked with mypy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
 
