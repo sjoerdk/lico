@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lico"
-version = "0.1.2"
+version = "0.1.3"
 description = "List processing with csv files"
 readme = "README.md"
 authors = ["sjoerdk <sjoerd.kerkstra@radboudumc.nl>"]
