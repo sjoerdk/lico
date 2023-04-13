@@ -1,10 +1,12 @@
 """Anything to do with loading from and saving to files"""
 import csv
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Union
 
-from lico.core import Operation, Table, apply_to_each, process
+from lico.core import Operation, RunStatistics, Table, apply_to_each
+from lico.logging import get_module_logger
+
+logger = get_module_logger('io')
 
 
 class CSVFile(Table):
@@ -82,16 +84,6 @@ class CSVFile(Table):
         self.save_to_path(self.path)
 
 
-@dataclass
-class RunStatistics:
-    """Statistics on a task run"""
-    operation: Operation
-    completed: int = 0
-    skipped: int = 0
-    failed: int = 0
-    errors: list = field(default_factory=lambda: [])
-
-
 class RowIterator:
     """Iterator that will yield rows, but also allow retrieval of unprocessed rows
 
@@ -119,6 +111,17 @@ class Task:
 
     def __init__(self, input_file: Union[CSVFile, Path], output_path: Path,
                  operation: Operation):
+        """
+
+        Parameters
+        ----------
+        input_file:
+            Input file name or CSVFile object
+        output_path:
+            Write output here
+        operation:
+            Run this on each row in input
+        """
         if isinstance(input_file, Path):
             self.input_file = CSVFile.init_from_path(input_file)
         else:
@@ -126,37 +129,39 @@ class Task:
         self.output_path = output_path
         self.operation = operation
 
-    def run(self):
-        # TODO: check whether output exists!
-
+    def run(self) -> RunStatistics:
         output = CSVFile(path=self.output_path,
                          column_order=self.input_file.column_order,
                          content=[])
 
-        statistics = RunStatistics(operation=self.operation)  # TODO: use this
+        statistics = RunStatistics()
         row_iter = RowIterator(rows=self.input_file.content)
         try:
 
             for result in apply_to_each(input_rows=row_iter,
                                    operation=self.operation,
-                                   skip_failing_rows = True,
-                                   skip_previous_results = True):
+                                   skip_failing_rows=True,
+                                   skip_previous_results=True,
+                                   statistics=statistics):
                 output.content.append(result)
 
         except Exception as e:
             # whatever happens, write all input rows
 
-            print(f'Unhandled exception {e}. Writing unprocessed rows to output')
-            # Exception was raised before last returned row could be processed. Add
-            output.content.append(row_iter.rows_returned[-1])
-            # Abort further running of operation. Just add unprocessed
-            output.content = output.content + row_iter.rows_left
-            print(statistics)
+            logger.error(f'Unhandled exception {e}. Writing unprocessed rows to output')
+            # Exception was raised before last returned row could be processed
+            unprocessed = [row_iter.rows_returned[-1]] + row_iter.rows_left
+            # Add unprocessed to output to not loose any rows in output
+            output.content = output.content + unprocessed
+            statistics.skipped += len(unprocessed) - 1
+            statistics.failed += 1
+            statistics.errors.append(e)
+            logger.info(statistics)
             output.save()
             raise e
 
         output.save()
-        print(statistics)
+        return statistics
 
 
 

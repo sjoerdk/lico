@@ -1,9 +1,13 @@
 """In-memory representations of a table and operations on table rows"""
 from collections import OrderedDict
+from dataclasses import dataclass, field
 
 from typing import Dict, Iterable, Iterator, List
 
 from lico.exceptions import RowProcessError
+from lico.logging import get_module_logger
+
+logger = get_module_logger('core')
 
 
 class Table:
@@ -60,7 +64,6 @@ class Table:
         from_content = set().union(*[x.keys() for x in self.content])
         extra = from_content.difference(set(fieldnames))
         return fieldnames + list(extra)
-
 
 
 class Operation:
@@ -130,9 +133,24 @@ class Operation:
         return False
 
 
+@dataclass
+class RunStatistics:
+    """Statistics on a task run"""
+    completed: int = 0
+    skipped: int = 0
+    failed: int = 0
+    errors: list = field(default_factory=lambda: [])
+
+    def __str__(self):
+        total = self.completed + self.skipped + self.failed
+        return f'{total} rows total, {self.completed} completed, ' \
+               f'{self.skipped} skipped, {self.failed} failed'
+
+
 def apply_to_each(input_rows: Iterable[Dict], operation: Operation,
                   skip_failing_rows=True,
-                  skip_previous_results=True
+                  skip_previous_results=True,
+                  statistics: RunStatistics=None
                   ) -> Iterator[Dict]:
     """Run operation on each row in input. Returns original row + operation results.
 
@@ -149,22 +167,33 @@ def apply_to_each(input_rows: Iterable[Dict], operation: Operation,
         Ignore RowProcessErrors while processing
     skip_previous_results:
         Ignore rows for which Operation.has_previous_result() = True
+    statistics:
+        Statistics object to record rows processed, skipped etc to.
+        Optional.
 
     """
+    if not statistics:
+        statistics = RunStatistics()
+
     def should_skip(row):
         return skip_previous_results and operation.has_previous_result(row)
 
     for count, input_row in enumerate(input_rows):
         if should_skip(input_row):
-            print(f'skipping row {count} for previous result')
+            logger.debug(f'skipping row {count} for previous result')
+            statistics.skipped += 1
             yield input_row
         else:
             try:
                 # overwrite input row with results from operation
-                yield {**input_row, **operation.apply_safe(input_row)}
+                result = operation.apply_safe(input_row)
+                statistics.completed += 1
+                yield {**input_row, **result}
             except RowProcessError as e:
                 if skip_failing_rows:
-                    print(f'Error processing row {count}: {e}')
+                    logger.debug(f'Error processing row {count}: {e}')
+                    statistics.failed += 1
+                    statistics.errors.append(e)
                     yield input_row
                 else:
                     raise e

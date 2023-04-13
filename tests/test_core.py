@@ -1,13 +1,12 @@
 """Tests for `lico` package"""
-
+import logging
 from io import StringIO
 from itertools import cycle
 from unittest.mock import Mock
 
 import pytest
 
-import lico.operations
-from lico.exceptions import MissingInputColumn, RowProcessError
+from lico.exceptions import RowProcessError
 from lico.io import CSVFile, Task
 from lico.operations import Concatenate, FetchResult
 from lico.core import Operation, Table, apply_to_each, process
@@ -96,8 +95,11 @@ def a_csv_table_file(tmp_path) -> CSVFile:
     return file
 
 
-def test_task(a_csv_table_file, tmp_path):
+def test_task(a_csv_table_file, tmp_path, caplog):
     """A task should handle exceptions well, writing what can be written"""
+    caplog.set_level(logging.DEBUG)
+
+
     unstable_server_func = Mock(side_effect=cycle(['one', 'two',
                                                    ValueError('Horrible error')]))
     output_path = tmp_path / 'a_result_file.csv'
@@ -107,7 +109,7 @@ def test_task(a_csv_table_file, tmp_path):
                 output_path=output_path)
 
     with pytest.raises(ValueError) as e:
-        results = task.run()
+        task.run()
 
     # output should still have been written
     output = CSVFile.init_from_path(output_path)

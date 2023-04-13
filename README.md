@@ -78,6 +78,13 @@ makes processing more robust:
 * Output of `Task.run()` will always have the same number of rows as the input. If an unhandled exception occurs during `Task.run()`, lico will stop processing but still write all results obtained
   so far. The unprocessed rows will be in the output unmodified. 
 
+## Logging
+Lico uses the root logger `lico`. To print log messages put this in your code:
+```
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+```
 
 ## CSV structure
 
