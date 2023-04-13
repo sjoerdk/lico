@@ -2,7 +2,7 @@
 from collections import OrderedDict
 from dataclasses import dataclass, field
 
-from typing import Dict, Iterable, Iterator, List
+from typing import Any, Dict, Iterable, Iterator, List
 
 from lico.exceptions import RowProcessError
 from lico.logging import get_module_logger
@@ -19,7 +19,7 @@ class Table:
 
     """
 
-    def __init__(self, content: List[Dict], column_order: List[str] = None):
+    def __init__(self, content: List[Dict[str, str]], column_order: List[str] = None):
         """
         Parameters
         ----------
@@ -54,8 +54,8 @@ class Table:
         """Adds all rows of other table to this one"""
         all_fieldnames = self.get_fieldnames() + other.get_fieldnames()
         unique = OrderedDict()
-        for field in all_fieldnames:
-            unique[field] = True
+        for field_name in all_fieldnames:
+            unique[field_name] = True
         self.column_order = list(unique.keys())
         self.content = self.content + other.content
 
@@ -83,13 +83,13 @@ class Operation:
 
     """
 
-    def apply_safe(self, row: Dict) -> Dict:
+    def apply_safe(self, row: Dict[str, str]) -> Dict[str, str]:
         """Apply operation, handle KeyErrors. Do not overwrite in child classes
 
         KeyError is raised in apply() when accessing any dict item that does
         not exist. For example trying row['name'] when there is no value for
-        'name' in that row. As this happens often with sparse CSV files and
-        you usually want to skip past these rows, this is handled here
+        'name' in that row. As this happens often with sparse CSV files.
+        You usually want to skip past these rows. This is handled here
 
         Returns
         -------
@@ -107,7 +107,7 @@ class Operation:
         except KeyError as e:
             raise (RowProcessError(f"Missing column {str(e)}")) from e
 
-    def apply(self, row: Dict) -> Dict:
+    def apply(self, row: Dict[str, str]) -> Dict[str, str]:
         """Run this operation on given row. Overwrite this in child classes.
 
         Parameters
@@ -129,7 +129,7 @@ class Operation:
         """
         return {}
 
-    def has_previous_result(self, row: Dict):
+    def has_previous_result(self, row: Dict[str, str]):
         """True if the given row contains a result from this operation"""
         return False
 
@@ -141,7 +141,7 @@ class RunStatistics:
     completed: int = 0
     skipped: int = 0
     failed: int = 0
-    errors: list = field(default_factory=lambda: [])
+    errors: list[Any] = field(default_factory=lambda: [])
 
     def __str__(self):
         total = self.completed + self.skipped + self.failed
@@ -152,12 +152,12 @@ class RunStatistics:
 
 
 def apply_to_each(
-    input_rows: Iterable[Dict],
+    input_rows: Iterable[Dict[str, str]],
     operation: Operation,
     skip_failing_rows=True,
     skip_previous_results=True,
     statistics: RunStatistics = None,
-) -> Iterator[Dict]:
+) -> Iterator[Dict[str, str]]:
     """Run operation on each row in input. Returns original row + operation results.
 
     Guarantees return value for each input row. If processing fails, the original

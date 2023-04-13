@@ -1,5 +1,4 @@
-"""Operations take a single table row and give back a new row
-"""
+"""Operations take a single table row and give back a new row"""
 
 from typing import Dict
 
@@ -15,7 +14,7 @@ class Concatenate(Operation):
     def apply(self, row):
         return {"concatenated": "".join(row[x] for x in self.columns)}
 
-    def has_previous_result(self, row: Dict):
+    def has_previous_result(self, row: Dict[str, str]):
         return bool(row.get("concatenated", None))
 
 

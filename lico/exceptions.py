@@ -6,5 +6,5 @@ class RowProcessError(LicoError):
     pass
 
 
-class MissingInputColumn(RowProcessError):
+class MissingInputColumnError(RowProcessError):
     pass

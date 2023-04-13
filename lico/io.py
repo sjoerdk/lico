@@ -32,7 +32,7 @@ class CSVFile(Table):
         self.path = path
 
     @classmethod
-    def init_from_table(cls, path, table):
+    def init_from_table(cls, path, table) -> "CSVFile":
         return cls(path=path, content=table.content, column_order=table.column_order)
 
     @classmethod
@@ -154,7 +154,9 @@ class Task:
         except Exception as e:
             # whatever happens, write all input rows
 
-            logger.error(f"Unhandled exception {e}. Writing unprocessed rows to output")
+            logger.error(
+                f"Unhandled exception {e}. Writing unprocessed rows to " f"output"
+            )
             # Exception was raised before last returned row could be processed
             unprocessed = [row_iter.rows_returned[-1]] + row_iter.rows_left
             # Add unprocessed to output to not loose any rows in output

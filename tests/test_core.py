@@ -31,7 +31,8 @@ def test_lico():
 def test_save_load(tmp_path):
     """Make sure saving and then loading yields the same table values
 
-    Also test actual disk io here to cover that code too"""
+    Also test actual disk io here to cover that code too
+    """
     filename = tmp_path / "testsaveload.csv"
     fieldnames = ["fieldB", "fieldA", "fieldC"]
     table1 = generate_csv_file(fieldnames=fieldnames)
@@ -39,12 +40,12 @@ def test_save_load(tmp_path):
     loaded = CSVFile.init_from_path(filename)
     assert len(table1) == len(loaded)
     assert table1.column_order == loaded.column_order
-    for saved, loaded in zip(table1.content, loaded.content):
-        assert saved == loaded
+    for saved_row, loaded_row in zip(table1.content, loaded.content):
+        assert saved_row == loaded_row
 
 
 def test_missing_parameter():
-    """test when missing parameter, is error message clear?"""
+    """Test when missing parameter, is error message clear?"""
     with pytest.raises(RowProcessError) as e:
         process(
             generate_table(fieldnames=["patient", "missingdate"]),
@@ -116,7 +117,7 @@ def test_task(a_csv_table_file, tmp_path, caplog):
         output_path=output_path,
     )
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(ValueError):
         task.run()
 
     # output should still have been written

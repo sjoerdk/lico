@@ -14,7 +14,7 @@ def generate_table(fieldnames=None, size=10):
     if not fieldnames:
         fieldnames = ["field1", "field2"]
     content = []
-    for i in range(size):
+    for _ in range(size):
         content.append({field: randomword(10) for field in fieldnames})
     return Table(content, column_order=fieldnames)
 
