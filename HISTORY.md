@@ -1,4 +1,7 @@
 # History
+## 0.1.3 (2023-04-13)
+* Lowers python requirement to ^3.9
+
 ## 0.1.2 (2023-04-06)
 * Moves package management to poetry
 * introduces mypy, black, flake8 checking
