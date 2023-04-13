@@ -7,7 +7,7 @@ from typing import Dict, Iterable, Iterator, List
 from lico.exceptions import RowProcessError
 from lico.logging import get_module_logger
 
-logger = get_module_logger('core')
+logger = get_module_logger("core")
 
 
 class Table:
@@ -18,6 +18,7 @@ class Table:
     * Can be sliced: Table[2:6] will be a Table again with only the given rows
 
     """
+
     def __init__(self, content: List[Dict], column_order: List[str] = None):
         """
         Parameters
@@ -49,7 +50,7 @@ class Table:
         """Append a row to this table"""
         return self.content.append(val)
 
-    def concat(self, other: 'Table'):
+    def concat(self, other: "Table"):
         """Adds all rows of other table to this one"""
         all_fieldnames = self.get_fieldnames() + other.get_fieldnames()
         unique = OrderedDict()
@@ -104,7 +105,7 @@ class Operation:
         try:
             return self.apply(row)
         except KeyError as e:
-            raise(RowProcessError(f'Missing column {str(e)}')) from e
+            raise (RowProcessError(f"Missing column {str(e)}")) from e
 
     def apply(self, row: Dict) -> Dict:
         """Run this operation on given row. Overwrite this in child classes.
@@ -136,6 +137,7 @@ class Operation:
 @dataclass
 class RunStatistics:
     """Statistics on a task run"""
+
     completed: int = 0
     skipped: int = 0
     failed: int = 0
@@ -143,15 +145,19 @@ class RunStatistics:
 
     def __str__(self):
         total = self.completed + self.skipped + self.failed
-        return f'{total} rows total, {self.completed} completed, ' \
-               f'{self.skipped} skipped, {self.failed} failed'
+        return (
+            f"{total} rows total, {self.completed} completed, "
+            f"{self.skipped} skipped, {self.failed} failed"
+        )
 
 
-def apply_to_each(input_rows: Iterable[Dict], operation: Operation,
-                  skip_failing_rows=True,
-                  skip_previous_results=True,
-                  statistics: RunStatistics=None
-                  ) -> Iterator[Dict]:
+def apply_to_each(
+    input_rows: Iterable[Dict],
+    operation: Operation,
+    skip_failing_rows=True,
+    skip_previous_results=True,
+    statistics: RunStatistics = None,
+) -> Iterator[Dict]:
     """Run operation on each row in input. Returns original row + operation results.
 
     Guarantees return value for each input row. If processing fails, the original
@@ -180,7 +186,7 @@ def apply_to_each(input_rows: Iterable[Dict], operation: Operation,
 
     for count, input_row in enumerate(input_rows):
         if should_skip(input_row):
-            logger.debug(f'skipping row {count} for previous result')
+            logger.debug(f"skipping row {count} for previous result")
             statistics.skipped += 1
             yield input_row
         else:
@@ -191,7 +197,7 @@ def apply_to_each(input_rows: Iterable[Dict], operation: Operation,
                 yield {**input_row, **result}
             except RowProcessError as e:
                 if skip_failing_rows:
-                    logger.debug(f'Error processing row {count}: {e}')
+                    logger.debug(f"Error processing row {count}: {e}")
                     statistics.failed += 1
                     statistics.errors.append(e)
                     yield input_row
@@ -199,8 +205,12 @@ def apply_to_each(input_rows: Iterable[Dict], operation: Operation,
                     raise e
 
 
-def process(table: Table, operation: Operation, skip_failing_rows=True,
-            skip_previous_results=True) -> Table:
+def process(
+    table: Table,
+    operation: Operation,
+    skip_failing_rows=True,
+    skip_previous_results=True,
+) -> Table:
     """Run the given operation on each row in table
 
     Higher-level function on the level of Tables. If you need more control use
@@ -217,6 +227,9 @@ def process(table: Table, operation: Operation, skip_failing_rows=True,
     skip_previous_results:
         Ignore rows for which Operation.has_previous_result() = True
     """
-    return Table(content=list(apply_to_each(table, operation, skip_failing_rows,
-                                            skip_previous_results)),
-                 column_order=table.column_order)
+    return Table(
+        content=list(
+            apply_to_each(table, operation, skip_failing_rows, skip_previous_results)
+        ),
+        column_order=table.column_order,
+    )

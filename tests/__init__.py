@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Unit test package for lico."""
 from pathlib import Path
 

@@ -6,7 +6,7 @@ from typing import Union
 from lico.core import Operation, RunStatistics, Table, apply_to_each
 from lico.logging import get_module_logger
 
-logger = get_module_logger('io')
+logger = get_module_logger("io")
 
 
 class CSVFile(Table):
@@ -59,16 +59,18 @@ class CSVFile(Table):
             reader = csv.DictReader(f)
             if column_names:
                 if len(column_names) != len(reader.fieldnames):
-                    raise ValueError(f"{len(column_names)} fieldname(s) given "
-                                     f"({column_names}), "
-                                     f"but {len(reader.fieldnames)} columns found "
-                                     f"in file. I can't be sure which column is "
-                                     f"which")
+                    raise ValueError(
+                        f"{len(column_names)} fieldname(s) given "
+                        f"({column_names}), "
+                        f"but {len(reader.fieldnames)} columns found "
+                        f"in file. I can't be sure which column is "
+                        f"which"
+                    )
             else:
                 column_names = reader.fieldnames
-            return cls(path=path,
-                       content=[row for row in reader],
-                       column_order=column_names)
+            return cls(
+                path=path, content=[row for row in reader], column_order=column_names
+            )
 
     def save_to_handle(self, handle):
         writer = csv.DictWriter(handle, fieldnames=self.get_fieldnames())
@@ -77,7 +79,7 @@ class CSVFile(Table):
             writer.writerow(row)
 
     def save_to_path(self, path):
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             self.save_to_handle(f)
 
     def save(self):
@@ -89,6 +91,7 @@ class RowIterator:
 
     Helps recovery from exceptions during row processing
     """
+
     def __init__(self, rows):
         self.rows_left = rows
         self.rows_returned = []
@@ -109,8 +112,9 @@ class Task:
     and previous results where possible.
     """
 
-    def __init__(self, input_file: Union[CSVFile, Path], output_path: Path,
-                 operation: Operation):
+    def __init__(
+        self, input_file: Union[CSVFile, Path], output_path: Path, operation: Operation
+    ):
         """
 
         Parameters
@@ -130,25 +134,27 @@ class Task:
         self.operation = operation
 
     def run(self) -> RunStatistics:
-        output = CSVFile(path=self.output_path,
-                         column_order=self.input_file.column_order,
-                         content=[])
+        output = CSVFile(
+            path=self.output_path, column_order=self.input_file.column_order, content=[]
+        )
 
         statistics = RunStatistics()
         row_iter = RowIterator(rows=self.input_file.content)
         try:
 
-            for result in apply_to_each(input_rows=row_iter,
-                                   operation=self.operation,
-                                   skip_failing_rows=True,
-                                   skip_previous_results=True,
-                                   statistics=statistics):
+            for result in apply_to_each(
+                input_rows=row_iter,
+                operation=self.operation,
+                skip_failing_rows=True,
+                skip_previous_results=True,
+                statistics=statistics,
+            ):
                 output.content.append(result)
 
         except Exception as e:
             # whatever happens, write all input rows
 
-            logger.error(f'Unhandled exception {e}. Writing unprocessed rows to output')
+            logger.error(f"Unhandled exception {e}. Writing unprocessed rows to output")
             # Exception was raised before last returned row could be processed
             unprocessed = [row_iter.rows_returned[-1]] + row_iter.rows_left
             # Add unprocessed to output to not loose any rows in output
@@ -162,6 +168,3 @@ class Task:
 
         output.save()
         return statistics
-
-
-
