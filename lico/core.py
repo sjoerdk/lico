@@ -1,4 +1,5 @@
 """In-memory representations of a table and operations on table rows"""
+import csv
 from collections import OrderedDict
 from dataclasses import dataclass, field
 
@@ -65,6 +66,16 @@ class Table:
         from_content = set().union(*[x.keys() for x in self.content])
         extra = from_content.difference(set(fieldnames))
         return fieldnames + list(extra)
+
+    def save_to_handle(self, handle):
+        writer = csv.DictWriter(handle, fieldnames=self.get_fieldnames())
+        writer.writeheader()
+        for row in self:
+            writer.writerow(row)
+
+    def save_to_path(self, path):
+        with open(path, "w") as f:
+            self.save_to_handle(f)
 
 
 class Operation:

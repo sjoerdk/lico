@@ -135,6 +135,13 @@ def test_table_slicing():
     assert table[3:6].content == table.content[3:6]
 
 
+def test_slicing_maintain_type():
+    """Slicing a Table should yield a Table"""
+    table = generate_table(fieldnames=["columnA", "ColumnB"])
+    sliced = table[2:4]
+    assert sliced.column_order == ["columnA", "ColumnB"]
+
+
 def test_table_file_iterating_slicing(a_csv_table_file):
     """You should be able to iterate and slice rows in a CSV file directly"""
     rows = [x for x in a_csv_table_file]

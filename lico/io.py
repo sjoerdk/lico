@@ -72,16 +72,6 @@ class CSVFile(Table):
                 path=path, content=[row for row in reader], column_order=column_names
             )
 
-    def save_to_handle(self, handle):
-        writer = csv.DictWriter(handle, fieldnames=self.get_fieldnames())
-        writer.writeheader()
-        for row in self:
-            writer.writerow(row)
-
-    def save_to_path(self, path):
-        with open(path, "w") as f:
-            self.save_to_handle(f)
-
     def save(self):
         self.save_to_path(self.path)
 

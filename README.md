@@ -50,6 +50,37 @@ class MyOperation(Operation):
         return {'new_column': new_value}     # new value(s)
         # 'new_column' is appended to existing columns in output
 ```
+### Table
+The `Table` class is the main representation of data lico 
+``` 
+table = Table()            # The Table represents tabular data
+table[2:4]                 # tables can be sliced   
+>>> table                  # and the slice is a Table again
+rows = [x for x in table]  # tables can be iterated over
+rows[0]
+>>> {'col1':'value1'}      # each row is a {column:value} dict
+
+# tables can be written to file
+table.save_to_path('output.csv') 
+
+# CSVFile is a Table that has a filename
+a_file = CSVFile.init_from_path("input.csv")
+a_file.save()
+```
+
+### More control
+The `process()` applies an operation to an input.
+
+```
+from lico.core import process
+from lico.io import CSVFile
+
+input_list = CSVFile.init_from_path("input.csv")
+output = process(input_list[1:3], operation=MyOperation('a_row')]
+output.save_to_path(output.path)
+
+```
+
 ### Skipping rows
 There are two ways to tell lico to skip a row.`Operation.has_previous_result()` and raising `RowProcessError`
 ```
